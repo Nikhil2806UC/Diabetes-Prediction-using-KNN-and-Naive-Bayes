@@ -1,0 +1,113 @@
+install.packages("e1071")
+install.packages("caTools")
+install.packages("caret")
+install.packages("naivebayes")
+
+library("e1071")
+library("caTools")
+library("caret")
+library("naivebayes")
+library("dplyr")
+
+# loading the dataset
+df <- read.csv("C:/UC/Probability/Presentation Topic/diabetes_dataset.csv")
+summary(df)
+str(df)
+
+#Creating a duplicate dataset for performing operations
+df2 <- df
+
+#check 0 values
+z2 <- sum(df2$Glucose==0)
+z3 <- sum(df2$BloodPressure==0)
+z4 <- sum(df2$SkinThickness==0) 
+z5 <- sum(df2$Insulin==0) 
+z6 <- sum(df2$BMI==0) 
+z7 <- sum(df2$Diabetes==0) 
+z8 <- sum(df2$Age==0) 
+z <- c(z2,z3,z4,z5,z6,z7,z8) 
+z
+
+#Replacing 0 values by its mean
+m2 <- mean(df2$Glucose, na.rm=TRUE)
+m3 <- mean(df2$BloodPressure, na.rm=TRUE)
+m4 <- mean(df2$SkinThickness, na.rm=TRUE)
+m5 <- mean(df2$Insulin, na.rm=TRUE)
+m6 <- mean(df2$BMI, na.rm=TRUE)
+
+df2$Glucose[df2$Glucose==0] <- m2
+df2$BloodPressure[df2$BloodPressure==0] <- m3
+df2$SkinThickness[df2$SkinThickness==0] <- m4
+df2$Insulin[df2$Insulin==0] <- m5
+df2$BMI[df2$BMI==0] <- m6
+
+str(df2)
+summary(df2)
+
+#Converting the outcome (labels) into factors
+df2$Outcome <- as.factor(df2$Outcome)
+
+# Splitting data into training and testing data 
+split <- sample.split(df2, SplitRatio = 0.7)
+train_cl <- subset(df2, split == "TRUE")
+test_cl <- subset(df2, split == "FALSE")
+str(train_cl)
+str(test_cl)
+
+
+#data Partition
+set.seed(1234)
+ind <- sample(2, nrow(df2), replace = T, prob = c(0.8, 0.2))
+train <- df2[ind==1,]
+test <- df2[ind==2,]
+str(train)
+str(test)
+
+
+# Fitting Naive Bayes Model to train dataset
+model <- naive_bayes(Outcome ~ ., data = train)
+model
+
+p1 <- predict(model, train, type = 'prob')
+head(cbind(p1, train))
+
+# Confusion Matrix - train data
+p1 <- predict(model, train)
+(tab1 <- table(p1, train$Outcome))
+1 - sum(diag(tab1)) / sum(tab1)
+
+
+# Confusion Matrix - test data
+p2 <- predict(model, test)
+(tab2 <- table(p2, test$Outcome))
+1 - sum(diag(tab2)) / sum(tab2) # Misclassification
+
+# ----------------- KNN --------------------#
+
+install.packages("gmodels")
+
+library("gmodels")
+library(class)
+
+df3 <- df2
+
+# Normalizing the data
+min_max_norm <- function(x) {
+  (x - min(x)) / (max(x) - min(x))
+}
+
+df3 <- as.data.frame(lapply(df3[1:8], min_max_norm))
+head(df3)
+
+# Creating training and test dataset
+df3_train <- df3[1:538,]
+df3_test <- df3[539:768,]
+df3[1:10,9]
+df3
+# Labels of train data and test data
+df3_train_labels <- df2[1:538, 9]
+df3_test_labels <- df2[539:768, 9] 
+
+# Building KNN Model
+df3_test_pred <- knn(train = df3_train, test = df3_test,cl = df3_train_labels, k=28)
+CrossTable(x= df3_test_labels, y=df3_test_pred, prop.chisq = FALSE)
